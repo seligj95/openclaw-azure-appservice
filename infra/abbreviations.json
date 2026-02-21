@@ -1,0 +1,9 @@
+{
+  "containerRegistryRegistries": "cr",
+  "managedIdentityUserAssignedIdentities": "id-",
+  "operationalInsightsWorkspaces": "log-",
+  "resourcesResourceGroups": "rg-",
+  "storageStorageAccounts": "st",
+  "webServerFarms": "asp-",
+  "webSites": "app-"
+}

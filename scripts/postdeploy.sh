@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo ""
+echo "============================================"
+echo "  OpenClaw deployed to Azure App Service!"
+echo "============================================"
+echo ""
+echo "  Web App:   ${WEBAPP_URL:-<not set>}"
+echo "  Gateway:   ${WEBAPP_URL:-<not set>}"
+echo "  Hostname:  ${WEBAPP_HOSTNAME:-<not set>}"
+echo ""
+echo "  Resource Group:  ${AZURE_RESOURCE_GROUP:-<not set>}"
+echo "  ACR:             ${CONTAINER_REGISTRY_LOGIN_SERVER:-<not set>}"
+echo ""
+echo "  To stream logs:"
+echo "    az webapp log tail --name ${WEBAPP_NAME:-<not set>} --resource-group ${AZURE_RESOURCE_GROUP:-<not set>}"
+echo ""
+echo "  To SSH into the container:"
+echo "    az webapp ssh --name ${WEBAPP_NAME:-<not set>} --resource-group ${AZURE_RESOURCE_GROUP:-<not set>}"
+echo ""
+echo "============================================"
