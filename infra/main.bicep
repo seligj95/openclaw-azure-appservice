@@ -90,7 +90,7 @@ var gatewayToken = empty(openclawGatewayToken) ? 'gt-${uniqueString(subscription
 // ============================================================
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
-  name: '${abbrs.resourcesResourceGroups}${environmentName}'
+  name: '${abbrs.resourcesResourceGroups}openclaw-${environmentName}'
   location: location
   tags: tags
 }

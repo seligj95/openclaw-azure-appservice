@@ -121,7 +121,7 @@ cd openclaw-azure-appservice
 azd auth login
 az login
 
-azd init -e my-openclaw
+azd init -e dev
 ```
 
 ### 2. Set Your Secrets
@@ -156,7 +156,7 @@ Behind the scenes, `azd up` runs:
 curl https://app-xxxxx.azurewebsites.net/health
 
 # Stream logs
-az webapp log tail --name app-xxxxx --resource-group rg-my-openclaw
+az webapp log tail --name app-xxxxx --resource-group rg-openclaw-dev
 ```
 
 Send a DM to your bot on Discord or Telegram — it should respond!

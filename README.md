@@ -6,7 +6,7 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│  Resource Group: rg-{env}                                     │
+│  Resource Group: rg-openclaw-{env}                               │
 │                                                               │
 │  ┌───────────────┐   ┌──────────────────────────────────────┐ │
 │  │  Azure        │   │  App Service (Web App for Containers)│ │
