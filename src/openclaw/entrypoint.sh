@@ -149,11 +149,12 @@ ${CHANNELS_INNER}
     "port": ${GATEWAY_PORT:-18789},
     "bind": "lan",
     "controlUi": {
-      "enabled": true
+      "enabled": true,
+      "dangerouslyDisableDeviceAuth": true
     },
     "auth": {
-      "mode": "token",
-      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+      "mode": "password",
+      "password": "${OPENCLAW_GATEWAY_PASSWORD:-${OPENCLAW_GATEWAY_TOKEN}}"
     }
   },
   "session": {
