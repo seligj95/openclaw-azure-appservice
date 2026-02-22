@@ -37,7 +37,7 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**Communication channels:** Discord, Telegram (the bot listens for DMs and responds using the configured LLM).
+**Communication channels:** Discord, Telegram, and the built-in **Control UI** web chat (the bot listens for DMs and responds using the configured LLM).
 
 ## Prerequisites
 
@@ -116,7 +116,7 @@ az webapp log tail --name <webapp-name> --resource-group <rg-name>
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token |
 | `TELEGRAM_ALLOWED_USER_ID` | No | Telegram user ID for access control |
 | `OPENCLAW_PERSONA_NAME` | No | Bot persona name (default: `Clawd`) |
-| `OPENCLAW_GATEWAY_TOKEN` | No | Gateway auth token (auto-generated if empty) |
+| `OPENCLAW_GATEWAY_TOKEN` | No | Gateway auth token for Control UI access (auto-generated if empty) |
 
 \* At least one channel (Discord or Telegram) must be configured.
 
@@ -180,6 +180,21 @@ AppServiceHTTPLogs
 - **Minimum TLS 1.2**: Enforced at the platform level
 - **FTP Disabled**: No FTP/FTPS access
 - **Secrets**: All API keys and tokens stored as App Settings (encrypted at rest)
+
+### Accessing the Control UI
+
+OpenClaw includes a built-in web chat interface called the **Control UI**. To access it, append your gateway token as a query parameter:
+
+```
+https://<your-app>.azurewebsites.net/?token=<your-gateway-token>
+```
+
+The gateway token is the value of the `OPENCLAW_GATEWAY_TOKEN` app setting. If you didn't set one explicitly, check the app settings in the Azure Portal or run:
+
+```bash
+az webapp config appsettings list --name <webapp-name> --resource-group <rg-name> \
+  --query "[?name=='OPENCLAW_GATEWAY_TOKEN'].value" -o tsv
+```
 
 ### Do I Need to Lock Down the App Service URL?
 

@@ -229,13 +229,28 @@ The deployment follows Azure security best practices:
 - **FTP disabled**
 - **Secrets as App Settings** — encrypted at rest by the platform
 
+### Accessing the Control UI
+
+OpenClaw includes a built-in web chat interface called the **Control UI**. To access it, append your gateway token as a query parameter:
+
+```
+https://<your-app>.azurewebsites.net/?token=<your-gateway-token>
+```
+
+The gateway token is the value of the `OPENCLAW_GATEWAY_TOKEN` app setting. If you didn't set one, the entrypoint script auto-generates one — check the app settings in the Azure Portal or run:
+
+```bash
+az webapp config appsettings list --name <webapp-name> --resource-group <rg-name> \
+  --query "[?name=='OPENCLAW_GATEWAY_TOKEN'].value" -o tsv
+```
+
 ### Do I Need to Lock Down the App Service URL?
 
 Short answer: probably not, but it depends on your comfort level.
 
 **What's exposed on the public URL:**
 - `/health` — returns a 200 status, no sensitive data
-- **Control UI** — a web dashboard for managing your bot (if `controlUi.enabled` is set to `true`)
+- **Control UI** — a web chat interface for interacting with your bot (access requires the gateway token)
 - **Gateway WebSocket** — requires the gateway token to authenticate; unauthenticated connections are rejected
 
 **What's NOT exposed:**
