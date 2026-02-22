@@ -5,36 +5,36 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Resource Group: rg-{env}                                    │
-│                                                              │
-│  ┌──────────────┐   ┌──────────────────────────────────────┐ │
+┌───────────────────────────────────────────────────────────────┐
+│  Resource Group: rg-{env}                                     │
+│                                                               │
+│  ┌───────────────┐   ┌──────────────────────────────────────┐ │
 │  │  Azure        │   │  App Service (Web App for Containers)│ │
 │  │  Container    │──▶│  - Linux container (Node.js 22)      │ │
 │  │  Registry     │   │  - Port 18789                        │ │
 │  │  (Basic)      │   │  - Always On + WebSockets            │ │
-│  └──────────────┘   │  - Health Check at /health            │ │
-│                      │  - User-assigned Managed Identity     │ │
-│                      │  - Azure Files mount                  │ │
+│  └───────────────┘   │  - Health Check at /health           │ │
+│                      │  - User-assigned Managed Identity    │ │
+│                      │  - Azure Files mount                 │ │
 │                      └────────────┬─────────────────────────┘ │
 │                                   │                           │
-│  ┌──────────────┐   ┌────────────▼──────────┐                │
-│  │  Log          │   │  Storage Account      │                │
-│  │  Analytics    │   │  - Azure Files share  │                │
-│  │  Workspace    │   │  - openclaw-workspace │                │
-│  └──────────────┘   └───────────────────────┘                │
-│                                                              │
-│  ┌──────────────────────────────────────────────────┐        │
+│  ┌──────────────┐   ┌─────────────▼──────────┐                │
+│  │  Log         │   │  Storage Account       │                │
+│  │  Analytics   │   │  - Azure Files share   │                │
+│  │  Workspace   │   │  - openclaw-workspace  │                │
+│  └──────────────┘   └────────────────────────┘                │
+│                                                               │
+│  ┌───────────────────────────────────────────────────┐        │
 │  │  Azure Monitor Alerts (optional)                  │        │
 │  │  - HTTP 5xx, health check, response time, volume  │        │
-│  └──────────────────────────────────────────────────┘        │
-│                                                              │
-│  ┌──────────────────────────────────────────────────┐        │
+│  └───────────────────────────────────────────────────┘        │
+│                                                               │
+│  ┌───────────────────────────────────────────────────┐        │
 │  │  Azure OpenAI (Cognitive Services)                │        │
 │  │  - GPT-4o model deployment                        │        │
 │  │  - Managed API key injection                      │        │
-│  └──────────────────────────────────────────────────┘        │
-└──────────────────────────────────────────────────────────────┘
+│  └───────────────────────────────────────────────────┘        │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 **Communication channels:** Discord, Telegram (the bot listens for DMs and responds using the configured LLM).
