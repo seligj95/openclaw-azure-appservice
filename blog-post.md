@@ -1,6 +1,6 @@
 # How to Host OpenClaw on Azure App Service
 
-*Your personal AI assistant, running 24/7 in the cloud — no laptop required.*
+*Your personal AI assistant, running 24/7 in the cloud — no laptop or Mac Mini required.*
 
 ---
 
