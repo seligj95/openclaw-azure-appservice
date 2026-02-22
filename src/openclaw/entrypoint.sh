@@ -153,8 +153,8 @@ ${CHANNELS_INNER}
       "dangerouslyDisableDeviceAuth": true
     },
     "auth": {
-      "mode": "password",
-      "password": "${OPENCLAW_GATEWAY_PASSWORD:-${OPENCLAW_GATEWAY_TOKEN}}"
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   },
   "session": {
