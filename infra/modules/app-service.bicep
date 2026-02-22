@@ -34,10 +34,6 @@ param storageAccountAccessKey string
 param storageFileShareName string
 
 // --- OpenClaw configuration ---
-@description('OpenRouter API key')
-@secure()
-param openRouterApiKey string
-
 @description('Discord bot token')
 @secure()
 param discordBotToken string = ''
@@ -56,8 +52,8 @@ param telegramAllowedUserId string = ''
 @secure()
 param openclawGatewayToken string
 
-@description('OpenClaw model identifier')
-param openclawModel string = 'openrouter/anthropic/claude-3.5-sonnet'
+@description('OpenClaw model identifier (overridden when Azure OpenAI is enabled)')
+param openclawModel string = ''
 
 @description('OpenClaw persona name')
 param openclawPersonaName string = 'Clawd'
@@ -65,6 +61,17 @@ param openclawPersonaName string = 'Clawd'
 // --- Security ---
 @description('Comma-separated CIDR blocks for IP restrictions (empty = allow all)')
 param allowedIpRanges string = ''
+
+// --- Azure OpenAI ---
+@description('Azure OpenAI endpoint URL')
+param azureOpenAiEndpoint string = ''
+
+@description('Azure OpenAI API key')
+@secure()
+param azureOpenAiApiKey string = ''
+
+@description('Azure OpenAI deployment name')
+param azureOpenAiDeploymentName string = ''
 
 // --- Managed Identity ---
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
@@ -113,9 +120,8 @@ var baseAppSettings = [
   { name: 'WEBSITES_PORT', value: '18789' }
   { name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE', value: 'true' }
   { name: 'NODE_ENV', value: 'production' }
-  { name: 'OPENROUTER_API_KEY', value: openRouterApiKey }
   { name: 'OPENCLAW_GATEWAY_TOKEN', value: openclawGatewayToken }
-  { name: 'OPENCLAW_MODEL', value: openclawModel }
+  { name: 'OPENCLAW_MODEL', value: empty(openclawModel) ? '' : openclawModel }
   { name: 'OPENCLAW_PERSONA_NAME', value: openclawPersonaName }
   { name: 'OPENCLAW_WORKSPACE', value: '/mnt/openclaw-workspace' }
   { name: 'GATEWAY_PORT', value: '18789' }
@@ -131,7 +137,13 @@ var telegramSettings = empty(telegramBotToken) ? [] : [
   { name: 'TELEGRAM_ALLOWED_USER_ID', value: telegramAllowedUserId }
 ]
 
-var appSettings = concat(baseAppSettings, discordSettings, telegramSettings)
+var azureOpenAiSettings = empty(azureOpenAiEndpoint) ? [] : [
+  { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
+  { name: 'AZURE_OPENAI_API_KEY', value: azureOpenAiApiKey }
+  { name: 'AZURE_OPENAI_DEPLOYMENT_NAME', value: azureOpenAiDeploymentName }
+]
+
+var appSettings = concat(baseAppSettings, discordSettings, telegramSettings, azureOpenAiSettings)
 
 // --- Web App ---
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
@@ -155,6 +167,8 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       alwaysOn: true
       webSocketsEnabled: true
       healthCheckPath: '/health'
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
       appSettings: appSettings
       ipSecurityRestrictions: empty(allIpRestrictions) ? null : allIpRestrictions
       azureStorageAccounts: {

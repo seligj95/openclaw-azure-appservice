@@ -14,7 +14,7 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 │  │  Registry     │   │  - Port 18789                        │ │
 │  │  (Basic)      │   │  - Always On + WebSockets            │ │
 │  └──────────────┘   │  - Health Check at /health            │ │
-│                      │  - System-assigned + User MI          │ │
+│                      │  - User-assigned Managed Identity     │ │
 │                      │  - Azure Files mount                  │ │
 │                      └────────────┬─────────────────────────┘ │
 │                                   │                           │
@@ -28,6 +28,12 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 │  │  Azure Monitor Alerts (optional)                  │        │
 │  │  - HTTP 5xx, health check, response time, volume  │        │
 │  └──────────────────────────────────────────────────┘        │
+│                                                              │
+│  ┌──────────────────────────────────────────────────┐        │
+│  │  Azure OpenAI (Cognitive Services)                │        │
+│  │  - GPT-4o model deployment                        │        │
+│  │  - Managed API key injection                      │        │
+│  └──────────────────────────────────────────────────┘        │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -38,7 +44,6 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (v2.60+)
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) (v1.9+)
 - An Azure subscription ([free trial](https://azure.microsoft.com/free/))
-- An [OpenRouter](https://openrouter.ai/) API key (or another LLM provider supported by OpenClaw)
 - A [Discord bot token](https://discord.com/developers/applications) and/or [Telegram bot token](https://core.telegram.org/bots#botfather)
 
 ## Quick Start
@@ -46,7 +51,7 @@ Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistan
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_ORG/openclaw-azure-appservice.git
+git clone https://github.com/seligj95/openclaw-azure-appservice.git
 cd openclaw-azure-appservice
 ```
 
@@ -66,9 +71,6 @@ azd init -e dev
 Set the required secrets and parameters:
 
 ```bash
-# Required
-azd env set OPENROUTER_API_KEY <your-openrouter-key>
-
 # Discord (at least one channel required)
 azd env set DISCORD_BOT_TOKEN <your-discord-bot-token>
 azd env set DISCORD_ALLOWED_USERS <comma-separated-user-ids>
@@ -78,9 +80,10 @@ azd env set TELEGRAM_BOT_TOKEN <your-telegram-bot-token>
 azd env set TELEGRAM_ALLOWED_USER_ID <your-telegram-user-id>
 
 # Optional customization
-azd env set OPENCLAW_MODEL "openrouter/anthropic/claude-3.5-sonnet"
 azd env set OPENCLAW_PERSONA_NAME "Clawd"
 ```
+
+> **Note:** Azure OpenAI (GPT-4o) is provisioned automatically by `azd up` — no external API key needed. This keeps your LLM, compute, and storage on a single Azure bill with enterprise controls (RBAC, content filtering, audit logging). Set `enableAzureOpenAi` to `false` if you prefer to bring your own provider.
 
 ### 4. Deploy
 
@@ -89,7 +92,7 @@ azd up
 ```
 
 This single command will:
-1. **Provision** all Azure infrastructure (App Service, ACR, Storage, Log Analytics)
+1. **Provision** all Azure infrastructure (App Service, ACR, Storage, Log Analytics, Azure OpenAI)
 2. **Build** the Docker image in ACR (via post-provision hook)
 3. **Configure** the Web App to pull from ACR with managed identity
 4. **Output** the URLs and next steps
@@ -108,12 +111,10 @@ az webapp log tail --name <webapp-name> --resource-group <rg-name>
 
 | Environment Variable | Required | Description |
 |---|---|---|
-| `OPENROUTER_API_KEY` | Yes | API key for LLM provider |
 | `DISCORD_BOT_TOKEN` | Yes* | Discord bot token |
 | `DISCORD_ALLOWED_USERS` | Yes* | Comma-separated Discord user IDs |
 | `TELEGRAM_BOT_TOKEN` | No | Telegram bot token |
 | `TELEGRAM_ALLOWED_USER_ID` | No | Telegram user ID for access control |
-| `OPENCLAW_MODEL` | No | Model identifier (default: `openrouter/anthropic/claude-3.5-sonnet`) |
 | `OPENCLAW_PERSONA_NAME` | No | Bot persona name (default: `Clawd`) |
 | `OPENCLAW_GATEWAY_TOKEN` | No | Gateway auth token (auto-generated if empty) |
 
@@ -123,7 +124,8 @@ az webapp log tail --name <webapp-name> --resource-group <rg-name>
 
 | Parameter | Default | Description |
 |---|---|---|
-| `appServiceSkuName` | `P0v3` | App Service Plan SKU |
+| `appServiceSkuName` | `P0v4` | App Service Plan SKU |
+| `enableAzureOpenAi` | `true` | Provision Azure OpenAI with GPT-4o |
 | `enableAlerts` | `true` | Enable Azure Monitor alerts |
 | `alertEmailAddress` | `` | Email for alert notifications |
 | `allowedIpRanges` | `` | Comma-separated CIDRs for IP restrictions |
@@ -177,8 +179,20 @@ AppServiceHTTPLogs
 - **HTTPS Only**: HTTP traffic is automatically redirected
 - **Minimum TLS 1.2**: Enforced at the platform level
 - **FTP Disabled**: No FTP/FTPS access
-- **IP Restrictions** (optional): Restrict access by CIDR blocks via `allowedIpRanges`
 - **Secrets**: All API keys and tokens stored as App Settings (encrypted at rest)
+
+### Do I Need to Lock Down the App Service URL?
+
+Discord and Telegram traffic doesn't flow through the App Service URL — the bot makes outbound connections to those APIs. The gateway WebSocket requires token authentication, so the main exposure is the **Control UI** dashboard.
+
+For most personal deployments, **IP restrictions** are the simplest way to lock things down:
+
+```bash
+azd env set allowedIpRanges "YOUR_IP/32"
+azd up
+```
+
+This restricts inbound access to your IP while leaving outbound bot connections unaffected. See the blog post for a full discussion of the security options.
 
 ## Updating OpenClaw
 
@@ -202,11 +216,12 @@ azd up
 
 | Resource | SKU | Estimated Monthly Cost |
 |---|---|---|
-| App Service Plan | P0v3 | ~$74 |
+| App Service Plan | P0v4 | ~$77 |
 | Container Registry | Basic | ~$5 |
 | Storage Account | Standard LRS (5 GB) | ~$0.10 |
 | Log Analytics | Pay-per-GB | ~$2–5 (low volume) |
-| **Total** | | **~$81–84/month** |
+| Azure OpenAI | S0 (GPT-4o) | Pay-per-token |
+| **Total** | | **~$85–90/month + token usage** |
 
 > Costs vary by region. Use the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) for precise estimates.
 
@@ -224,7 +239,7 @@ azd up
 | **Azure Files mount** | ✅ Path mapping | ✅ Volume mount |
 | **Pricing model** | Dedicated plan | Consumption or dedicated |
 
-For OpenClaw (a single always-on container), **App Service** is a straightforward and cost-effective choice.
+For OpenClaw (a single always-on container), either service works well. This template uses App Service; for a Container Apps approach, check out [Dheeraj Bandaru's guide](https://www.agent-lair.com/deploy-clawdbot-azure-container-apps).
 
 ## Troubleshooting
 
@@ -275,5 +290,5 @@ MIT
 ## Related
 
 - [OpenClaw](https://openclaw.ai) — The open-source personal AI assistant
-- [OpenClaw on Container Apps](https://github.com/BandaruDheeraj/moltbot-azure-container-apps) — Alternative deployment using Azure Container Apps
+- [OpenClaw on Container Apps](https://www.agent-lair.com/deploy-clawdbot-azure-container-apps) — Dheeraj Bandaru's guide to deploying on Azure Container Apps
 - [Azure App Service Documentation](https://learn.microsoft.com/azure/app-service/)

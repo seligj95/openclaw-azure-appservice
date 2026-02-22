@@ -12,11 +12,6 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-// --- API Keys ---
-@description('OpenRouter API key for LLM access')
-@secure()
-param openRouterApiKey string = ''
-
 // --- Discord ---
 @description('Discord bot token')
 @secure()
@@ -38,8 +33,24 @@ param telegramAllowedUserId string = ''
 @secure()
 param openclawGatewayToken string = ''
 
-@description('OpenClaw AI model identifier')
-param openclawModel string = 'openrouter/anthropic/claude-3.5-sonnet'
+@description('OpenClaw AI model identifier (overridden when Azure OpenAI is enabled)')
+param openclawModel string = ''
+
+// --- Azure OpenAI ---
+@description('Enable Azure OpenAI resource provisioning')
+param enableAzureOpenAi bool = true
+
+@description('Azure OpenAI model deployment name')
+param azureOpenAiModelDeployment string = 'gpt-4o'
+
+@description('Azure OpenAI model name')
+param azureOpenAiModelName string = 'gpt-4o'
+
+@description('Azure OpenAI model version')
+param azureOpenAiModelVersion string = '2024-11-20'
+
+@description('Azure OpenAI model capacity (TPM in thousands)')
+param azureOpenAiModelCapacity int = 30
 
 @description('Bot persona name')
 param openclawPersonaName string = 'Clawd'
@@ -129,6 +140,20 @@ module appServicePlan 'modules/app-service-plan.bicep' = {
   }
 }
 
+module azureOpenAi 'modules/azure-openai.bicep' = if (enableAzureOpenAi) {
+  name: 'azure-openai'
+  scope: rg
+  params: {
+    name: '${abbrs.cognitiveServicesAccounts}${resourceToken}'
+    location: location
+    tags: tags
+    modelDeploymentName: azureOpenAiModelDeployment
+    modelName: azureOpenAiModelName
+    modelVersion: azureOpenAiModelVersion
+    modelCapacity: azureOpenAiModelCapacity
+  }
+}
+
 module appService 'modules/app-service.bicep' = {
   name: 'app-service'
   scope: rg
@@ -144,7 +169,6 @@ module appService 'modules/app-service.bicep' = {
     storageAccountName: storageAccount.outputs.name
     storageAccountAccessKey: storageAccount.outputs.accessKey
     storageFileShareName: storageAccount.outputs.fileShareName
-    openRouterApiKey: openRouterApiKey
     discordBotToken: discordBotToken
     discordAllowedUsers: discordAllowedUsers
     telegramBotToken: telegramBotToken
@@ -153,6 +177,9 @@ module appService 'modules/app-service.bicep' = {
     openclawModel: openclawModel
     openclawPersonaName: openclawPersonaName
     allowedIpRanges: allowedIpRanges
+    azureOpenAiEndpoint: enableAzureOpenAi ? azureOpenAi!.outputs.endpoint : ''
+    azureOpenAiApiKey: enableAzureOpenAi ? azureOpenAi!.outputs.apiKey : ''
+    azureOpenAiDeploymentName: enableAzureOpenAi ? azureOpenAi!.outputs.deploymentName : ''
   }
 }
 
@@ -180,3 +207,5 @@ output WEBAPP_URL string = appService.outputs.url
 output WEBAPP_HOSTNAME string = appService.outputs.defaultHostName
 output STORAGE_ACCOUNT_NAME string = storageAccount.outputs.name
 output LOG_ANALYTICS_WORKSPACE_ID string = logAnalytics.outputs.id
+output AZURE_OPENAI_ENDPOINT string = enableAzureOpenAi ? azureOpenAi!.outputs.endpoint : ''
+output AZURE_OPENAI_DEPLOYMENT_NAME string = enableAzureOpenAi ? azureOpenAi!.outputs.deploymentName : ''

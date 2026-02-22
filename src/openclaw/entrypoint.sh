@@ -32,10 +32,10 @@ if [ -n "${DISCORD_BOT_TOKEN}" ]; then
     "discord": {
       "enabled": true,
       "token": "${DISCORD_BOT_TOKEN}",
+      "dmPolicy": "allowlist",
+      "allowFrom": ${ALLOW_FROM},
       "dm": {
-        "enabled": true,
-        "policy": "allowlist",
-        "allowFrom": ${ALLOW_FROM}
+        "enabled": true
       },
       "groupPolicy": "open"
     }
@@ -81,14 +81,54 @@ elif [ -n "${TELEGRAM_CONFIG}" ]; then
   CHANNELS_INNER="${TELEGRAM_CONFIG}"
 fi
 
+# --- Build Azure OpenAI provider config ---
+MODELS_CONFIG=""
+if [ -n "${AZURE_OPENAI_ENDPOINT}" ] && [ -n "${AZURE_OPENAI_API_KEY}" ]; then
+  DEPLOYMENT="${AZURE_OPENAI_DEPLOYMENT_NAME:-gpt-4o}"
+  # Use the OpenAI-compatible /openai/v1 path (no ?api-version= query param needed).
+  # The standard OpenAI SDK constructs URLs via string concatenation (baseURL + "/chat/completions"),
+  # so query params in baseUrl break URL construction and cause 404 errors.
+  AOAI_BASE_URL="${AZURE_OPENAI_ENDPOINT%/}/openai/v1"
+  MODELS_CONFIG=$(cat <<MODELS
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "azure-openai": {
+        "baseUrl": "${AOAI_BASE_URL}",
+        "apiKey": "${AZURE_OPENAI_API_KEY}",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "${DEPLOYMENT}",
+            "name": "${DEPLOYMENT} (Azure OpenAI)",
+            "reasoning": false,
+            "input": ["text", "image"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 128000,
+            "maxTokens": 16384
+          }
+        ]
+      }
+    }
+  },
+MODELS
+  )
+  # Override the default model to use Azure OpenAI
+  OPENCLAW_MODEL="azure-openai/${DEPLOYMENT}"
+  echo "[entrypoint] Azure OpenAI configured: endpoint=${AZURE_OPENAI_ENDPOINT} deployment=${DEPLOYMENT}"
+else
+  echo "[entrypoint] Azure OpenAI not configured (AZURE_OPENAI_ENDPOINT not set)"
+fi
+
 # --- Write config file ---
 cat > "${CONFIG_FILE}" <<EOF
 {
+${MODELS_CONFIG}
   "agents": {
     "defaults": {
       "workspace": "${WORKSPACE_DIR}",
       "model": {
-        "primary": "${OPENCLAW_MODEL:-openrouter/anthropic/claude-3.5-sonnet}"
+        "primary": "${OPENCLAW_MODEL}"
       }
     },
     "list": [
@@ -124,8 +164,8 @@ ${CHANNELS_INNER}
     }
   },
   "logging": {
-    "level": "info",
-    "consoleLevel": "info",
+    "level": "debug",
+    "consoleLevel": "debug",
     "consoleStyle": "pretty"
   }
 }
@@ -133,12 +173,27 @@ EOF
 
 echo "[entrypoint] OpenClaw configuration written to ${CONFIG_FILE}"
 echo "[entrypoint] Gateway token configured: yes"
-echo "[entrypoint] Model: ${OPENCLAW_MODEL:-openrouter/anthropic/claude-3.5-sonnet}"
+echo "[entrypoint] Model: ${OPENCLAW_MODEL}"
 echo "[entrypoint] Persona: ${OPENCLAW_PERSONA_NAME:-Clawd}"
 echo "[entrypoint] Workspace: ${WORKSPACE_DIR}"
 echo "[entrypoint] Starting OpenClaw gateway..."
 
+# Dump config and tail file log after Doctor modifies it
+(
+  sleep 30
+  echo "[entrypoint-debug] === CONFIG AFTER DOCTOR (30s delay) ==="
+  cat "${CONFIG_FILE}" 2>/dev/null || echo "[entrypoint-debug] config file not found"
+  echo "[entrypoint-debug] === END CONFIG ==="
+  # Tail the file log so verbose/debug messages appear in stdout
+  LOG_FILE=$(ls -t /tmp/openclaw/openclaw*.log 2>/dev/null | head -1)
+  if [ -n "${LOG_FILE}" ]; then
+    echo "[entrypoint-debug] Tailing log file: ${LOG_FILE}"
+    tail -f "${LOG_FILE}" &
+  fi
+) &
+
 exec node dist/index.js gateway \
+  --verbose \
   --bind lan \
   --port "${GATEWAY_PORT:-18789}" \
   --allow-unconfigured \

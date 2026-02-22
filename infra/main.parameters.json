@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "discordBotToken": {
+      "value": "${discordBotToken}"
+    },
+    "discordAllowedUsers": {
+      "value": "${discordAllowedUsers}"
+    },
+    "telegramBotToken": {
+      "value": "${telegramBotToken}"
+    },
+    "telegramAllowedUserId": {
+      "value": "${telegramAllowedUserId}"
+    },
+    "openclawGatewayToken": {
+      "value": "${openclawGatewayToken}"
+    },
+    "openclawPersonaName": {
+      "value": "${openclawPersonaName}"
+    },
+    "appServiceSkuName": {
+      "value": "${appServiceSkuName}"
+    },
+    "imageTag": {
+      "value": "${imageTag}"
+    },
+    "allowedIpRanges": {
+      "value": "${allowedIpRanges}"
+    },
+    "enableAlerts": {
+      "value": "${enableAlerts}"
+    },
+    "alertEmailAddress": {
+      "value": "${alertEmailAddress}"
+    },
+    "enableAzureOpenAi": {
+      "value": "${enableAzureOpenAi}"
+    },
+    "azureOpenAiModelDeployment": {
+      "value": "${azureOpenAiModelDeployment}"
+    },
+    "azureOpenAiModelName": {
+      "value": "${azureOpenAiModelName}"
+    },
+    "azureOpenAiModelVersion": {
+      "value": "${azureOpenAiModelVersion}"
+    },
+    "azureOpenAiModelCapacity": {
+      "value": "${azureOpenAiModelCapacity}"
+    }
+  }
+}

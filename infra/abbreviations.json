@@ -1,4 +1,5 @@
 {
+  "cognitiveServicesAccounts": "oai-",
   "containerRegistryRegistries": "cr",
   "managedIdentityUserAssignedIdentities": "id-",
   "operationalInsightsWorkspaces": "log-",
