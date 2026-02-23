@@ -10,7 +10,7 @@ image: assets/images/hero.png
 
 ---
 
-![OpenClaw on Azure App Service](assets/images/hero.png)
+![OpenClaw on Azure App Service](/openclaw-azure-appservice/assets/images/hero.png)
 
 [OpenClaw](https://openclaw.ai/) is an open-source personal AI assistant that runs as a persistent service, connecting to your Discord, Telegram, and other channels. It's one of a growing wave of always-on AI tools — personal agents, coding assistants, chatbots — and it won't be the last. As more of these tools emerge, the question of where to run them is going to come up a lot.
 
