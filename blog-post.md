@@ -1,6 +1,7 @@
 ---
 title: "You Can Host OpenClaw on Azure App Service — Here's How"
 description: "Deploy OpenClaw to Azure App Service with VNet integration, private endpoints, and one-command deployment using azd."
+image: assets/images/hero.png
 ---
 
 # You Can Host OpenClaw on Azure App Service — Here's How
@@ -8,6 +9,8 @@ description: "Deploy OpenClaw to Azure App Service with VNet integration, privat
 *Your personal AI assistant, running 24/7 in the cloud — no laptop or Mac Mini required.*
 
 ---
+
+![OpenClaw on Azure App Service](assets/images/hero.png)
 
 [OpenClaw](https://openclaw.ai/) is an open-source personal AI assistant that runs as a persistent service, connecting to your Discord, Telegram, and other channels. It's one of a growing wave of always-on AI tools — personal agents, coding assistants, chatbots — and it won't be the last. As more of these tools emerge, the question of where to run them is going to come up a lot.
 
@@ -18,6 +21,8 @@ Dheeraj Bandaru wrote a great post on [hosting OpenClaw on Azure Container Apps]
 > "Most guides show AWS EC2 or VPS hosting. I wanted to see if Azure Container Apps could do it easier!"
 
 This post takes a similar approach but uses **Azure App Service (Web App for Containers)** instead — a natural fit if you're already familiar with App Service or prefer its operational model. Both are excellent options; pick the one that matches your experience and preferences.
+
+📦 [Full source code on GitHub](https://github.com/seligj95/openclaw-azure-appservice)
 
 ## Why Consider Cloud Hosting?
 
