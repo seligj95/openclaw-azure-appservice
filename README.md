@@ -1,41 +1,65 @@
 # OpenClaw on Azure App Service
 
-Deploy [OpenClaw](https://openclaw.ai) — your open-source personal AI assistant — to **Azure App Service (Web App for Containers)**. This sample uses the [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/) for one-command provisioning and deployment.
+Deploy [OpenClaw](https://openclaw.ai/) — your open-source personal AI assistant — to **Azure App Service (Web App for Containers)**. This sample uses the [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/) for one-command provisioning and deployment with security best practices: VNet integration, private endpoints, and network ACLs that block public internet access to backend services.
 
 ## Architecture
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│  Resource Group: rg-openclaw-{env}                            │
-│                                                               │
-│  ┌───────────────┐   ┌──────────────────────────────────────┐ │
-│  │  Azure        │   │  App Service (Web App for Containers)│ │
-│  │  Container    │──▶│  - Linux container (Node.js 22)      │ │
-│  │  Registry     │   │  - Port 18789                        │ │
-│  │  (Basic)      │   │  - Always On + WebSockets            │ │
-│  └───────────────┘   │  - Health Check at /health           │ │
-│                      │  - User-assigned Managed Identity    │ │
-│                      │  - Azure Files mount                 │ │
-│                      └────────────┬─────────────────────────┘ │
-│                                   │                           │
-│  ┌──────────────┐   ┌─────────────▼──────────┐                │
-│  │  Log         │   │  Storage Account       │                │
-│  │  Analytics   │   │  - Azure Files share   │                │
-│  │  Workspace   │   │  - openclaw-workspace  │                │
-│  └──────────────┘   └────────────────────────┘                │
-│                                                               │
-│  ┌───────────────────────────────────────────────────┐        │
-│  │  Azure Monitor Alerts (optional)                  │        │
-│  │  - HTTP 5xx, health check, response time, volume  │        │
-│  └───────────────────────────────────────────────────┘        │
-│                                                               │
-│  ┌───────────────────────────────────────────────────┐        │
-│  │  Azure OpenAI (Cognitive Services)                │        │
-│  │  - GPT-4o model deployment                        │        │
-│  │  - Managed API key injection                      │        │
-│  └───────────────────────────────────────────────────┘        │
-└───────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Resource Group: rg-openclaw-{env}                                       │
+│                                                                          │
+│  ┌────────────────┐                                                      │
+│  │ Azure Container│   (Basic SKU, public endpoint, managed identity pull)│
+│  │ Registry       │──────────────────────────────────┐                   │
+│  └────────────────┘                                  │                   │
+│                                                      │                   │
+│  ┌─── VNet ──────────────────────────────────────────┼─────────────────┐ │
+│  │                                                   ▼                 │ │
+│  │  ┌─ snet-app (delegated to App Service) ────────────────────────┐   │ │
+│  │  │                                                              │   │ │
+│  │  │  App Service (Web App for Containers)                        │   │ │
+│  │  │  - Linux container (Node.js 22) on port 18789                │   │ │
+│  │  │  - Always On + WebSockets + Health Check at /health          │   │ │
+│  │  │  - User-assigned Managed Identity (AcrPull)                  │   │ │
+│  │  │  - VNet integration (vnetRouteAllEnabled)                    │   │ │
+│  │  │  - Azure Files mount at /mnt/openclaw-workspace              │   │ │
+│  │  │                                                              │   │ │
+│  │  └──────────────────┬──────────────────────┬────────────────────┘   │ │
+│  │                     │ private endpoints    │                        │ │
+│  │  ┌─ snet-private-endpoints ────────────────┼────────────────────┐   │ │
+│  │  │                  │                      │                    │   │ │
+│  │  │    ┌─────────────▼──────────┐  ┌────────▼──────────────┐     │   │ │
+│  │  │    │ Storage Account (PE)   │  │ Azure OpenAI (PE)     │     │   │ │
+│  │  │    │ - Azure Files share    │  │ - GPT-4o deployment   │     │   │ │
+│  │  │    │ - Default: Deny        │  │ - Default: Deny       │     │   │ │
+│  │  │    └────────────────────────┘  └───────────────────────┘     │   │ │
+│  │  └──────────────────────────────────────────────────────────────┘   │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  ┌──────────────┐  ┌───────────────────────────────────────────┐         │
+│  │ Log          │  │ Azure Monitor Alerts (optional)           │         │
+│  │ Analytics    │  │ - HTTP 5xx, health check, response time   │         │
+│  └──────────────┘  └───────────────────────────────────────────┘         │
+│                                                                          │
+│  Private DNS Zones: privatelink.file.{storage}, privatelink.openai.*     │
+└──────────────────────────────────────────────────────────────────────────┘
+
+        ▲                    ▲
+        │                    │
+   Discord Bot          Telegram Bot
+   (outbound DMs)       (outbound DMs)
 ```
+
+**Key design decisions:**
+
+- **VNet integration** — App Service routes all outbound traffic through the VNet so backend calls stay off the public internet
+- **Private endpoints & network ACLs** — Azure Storage and Azure OpenAI use private endpoints for DNS resolution and VNet service endpoint rules with a default-deny policy, blocking all public internet access while allowing traffic from the App Service subnet
+- **ACR stays on Basic SKU** — private endpoints require Premium (~$50/mo vs. ~$5/mo for Basic). Since ACR is only accessed at build time and container pull (both authenticated via managed identity), the risk is low. Upgrade to Premium and add a PE if you want full network isolation.
+- **Managed Identity** pulls images from ACR — no passwords stored in config
+- **Azure OpenAI** provisions GPT-4o automatically — no external API keys needed
+- **Azure Files** mounts at `/mnt/openclaw-workspace` for conversation history and agent memory
+- **Log Analytics** captures HTTP logs, console output, and platform diagnostics
+- **Azure Monitor alerts** notify you if something goes wrong (5xx errors, health check failures, etc.)
 
 **Communication channels:** Discord, Telegram, and the built-in **Control UI** web chat (the bot listens for DMs and responds using the configured LLM).
 
@@ -92,9 +116,9 @@ azd up
 ```
 
 This single command will:
-1. **Provision** all Azure infrastructure (App Service, ACR, Storage, Log Analytics, Azure OpenAI)
+1. **Provision** all Azure infrastructure (VNet, App Service, ACR, Storage with private endpoint, Azure OpenAI with private endpoint, Log Analytics)
 2. **Build** the Docker image in ACR (via post-provision hook)
-3. **Configure** the Web App to pull from ACR with managed identity
+3. **Configure** the Web App with VNet integration to pull from ACR with managed identity
 4. **Output** the URLs and next steps
 
 ### 5. Verify
@@ -175,11 +199,17 @@ AppServiceHTTPLogs
 
 ## Security
 
-- **Managed Identity**: User-assigned MI for ACR pull (no admin credentials)
-- **HTTPS Only**: HTTP traffic is automatically redirected
-- **Minimum TLS 1.2**: Enforced at the platform level
-- **FTP Disabled**: No FTP/FTPS access
-- **Secrets**: All API keys and tokens stored as App Settings (encrypted at rest)
+The deployment follows Azure security best practices:
+
+- **VNet integration** — the App Service routes all outbound traffic through a virtual network, so calls to Azure OpenAI, Azure Files, and other backend services stay off the public internet
+- **Private endpoints & network ACLs** — Azure Storage and Azure OpenAI use private endpoints for DNS resolution and VNet service endpoint rules with a default-deny policy, blocking all public internet access while allowing traffic from the App Service subnet
+- **No passwords for ACR** — managed identity with AcrPull role
+- **HTTPS only** — HTTP redirects automatically
+- **TLS 1.2 minimum** — enforced at the platform level
+- **FTP disabled** — no FTP/FTPS access
+- **Secrets as App Settings** — all API keys and tokens encrypted at rest by the platform
+
+> **Note on ACR:** The container registry is the one resource that doesn't have a private endpoint in this template. Private endpoints for ACR require the Premium SKU (~$50/month vs. ~$5/month for Basic), and since the registry is only accessed at build time and container pull — both authenticated — the risk is low. If you want full network isolation, upgrade ACR to Premium and add a private endpoint following the same pattern used for Storage and OpenAI in the Bicep modules.
 
 ### Accessing the Control UI
 

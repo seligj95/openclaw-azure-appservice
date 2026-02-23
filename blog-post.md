@@ -1,26 +1,29 @@
-# How to Host OpenClaw on Azure App Service
+# You Can Host OpenClaw on Azure App Service — Here's How
 
 *Your personal AI assistant, running 24/7 in the cloud — no laptop or Mac Mini required.*
 
 ---
 
-OpenClaw is an open-source personal AI assistant that runs as a persistent service, connecting to your Discord, Telegram, and other channels. Most people run it on their local machine, but what if you want it available all the time — even when your laptop is closed?
+[OpenClaw](https://openclaw.ai/) is an open-source personal AI assistant that runs as a persistent service, connecting to your Discord, Telegram, and other channels. It's one of a growing wave of always-on AI tools — personal agents, coding assistants, chatbots — and it won't be the last. As more of these tools emerge, the question of where to run them is going to come up a lot.
+
+Most people run OpenClaw on a local machine — a lot of folks are buying Mac Minis and leaving them on 24/7. That works great, but those machines aren't cheap (and are getting more expensive as demand increases), and you end up dealing with things like your bot going offline when the machine sleeps or restarts, flaky home internet, and your workstation pulling double duty as a server. Cloud hosting is another option worth considering — and Azure App Service makes it pretty straightforward.
 
 Dheeraj Bandaru wrote a great post on [hosting OpenClaw on Azure Container Apps](https://www.agent-lair.com/deploy-clawdbot-azure-container-apps), which inspired this guide. As Dheeraj put it:
 
 > "Most guides show AWS EC2 or VPS hosting. I wanted to see if Azure Container Apps could do it easier!"
 
-This post takes a similar approach but uses **Azure App Service (Web App for Containers)** instead — a natural fit if you're already familiar with App Service or prefer its operational model. Both are excellent options; pick the one that matches your team's experience.
+This post takes a similar approach but uses **Azure App Service (Web App for Containers)** instead — a natural fit if you're already familiar with App Service or prefer its operational model. Both are excellent options; pick the one that matches your experience and preferences.
 
-## Why Host OpenClaw in the Cloud?
+## Why Consider Cloud Hosting?
 
-Running OpenClaw locally works, but it has limitations:
+Running OpenClaw locally works well for a lot of people, but it does come with some trade-offs:
 
 - **Uptime** — your bot stops when your computer sleeps or restarts
 - **Network** — your home connection may be unreliable or behind NAT
 - **Resources** — your machine is doing double duty as both your workstation and a server
+- **Security** — one of the biggest challenges today. A lot of people self-hosting OpenClaw don't realize they're exposing ports, running without TLS, or leaving API keys in plaintext config files. It's easy to get wrong, and the consequences can be serious
 
-Moving to Azure means OpenClaw runs 24/7 on dedicated infrastructure, accessible from anywhere.
+If any of that bugs you, cloud hosting is worth a look. Moving to Azure means OpenClaw runs 24/7 on managed infrastructure without tying up a machine at home.
 
 ## Why Azure App Service?
 
@@ -32,7 +35,8 @@ There are several ways to run containers on Azure — Container Apps, AKS, Conta
 4. **SSH access** — you can SSH directly into your running container from the Azure Portal or CLI
 5. **Deployment slots** — test updates in staging before swapping to production
 6. **Azure Files integration** — persistent storage that survives container restarts
-7. **Cost predictability** — a fixed monthly plan with no per-request surprises
+7. **Built-in security** — this is a big one. A lot of OpenClaw users struggle with securing their setup — exposed ports, no TLS, API keys in plaintext. App Service handles much of this for you out of the box: HTTPS by default, Easy Auth (Entra ID) for authentication, VNet integration, IP access restrictions, and private endpoints — no extra infrastructure or security expertise needed
+8. **Cost predictability** — a fixed monthly plan with no per-request surprises
 
 ### Choosing Between App Service and Container Apps
 
@@ -54,24 +58,24 @@ For a single always-on container like OpenClaw, either service works. This guide
 Here's what gets deployed:
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Resource Group                                          │
-│                                                          │
-│  ┌─────────────┐    ┌────────────────────────────┐       │
+┌───────────────────────────────────────────────────────────┐
+│  Resource Group                                           │
+│                                                           │
+│  ┌──────────────┐    ┌────────────────────────────┐       │
 │  │ Azure        │    │ App Service                │       │
 │  │ Container    │───▶│ (Web App for Containers)   │       │
 │  │ Registry     │    │                            │       │
-│  └─────────────┘    │  OpenClaw container         │       │
-│                      │  Port 18789                 │       │
-│                      │  WebSockets enabled         │       │
-│                      │  Health checks at /health   │       │
+│  └──────────────┘    │  OpenClaw container        │       │
+│                      │  Port 18789                │       │
+│                      │  WebSockets enabled        │       │
+│                      │  Health checks at /health  │       │
 │                      └──┬───────────┬─────────────┘       │
 │                         │           │                     │
 │  ┌─────────────┐   ┌────▼─────┐  ┌──▼──────────────────┐  │
-│  │ Log          │   │ Azure    │  │ Azure OpenAI        │  │
-│  │ Analytics    │   │ Files    │  │ (GPT-4o)            │  │
+│  │ Log         │   │ Azure    │  │ Azure OpenAI        │  │
+│  │ Analytics   │   │ Files    │  │ (GPT-4o)            │  │
 │  └─────────────┘   └──────────┘  └─────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────┘
 
         ▲                    ▲
         │                    │
@@ -151,6 +155,8 @@ Behind the scenes, `azd up` runs:
 
 ### 4. Verify It's Running
 
+> **Note:** After `azd up` finishes, give it a couple of minutes for the container to pull, start, and pass health checks before everything is fully available.
+
 ```bash
 # Health check
 curl https://app-xxxxx.azurewebsites.net/health
@@ -166,7 +172,7 @@ Send a DM to your bot on Discord or Telegram — it should respond!
 The Dockerfile builds OpenClaw from source:
 
 ```dockerfile
-FROM node:22-bookworm
+FROM node:22-bookworm-slim
 # Clone, install deps, build
 RUN git clone https://github.com/openclaw/openclaw.git ...
 RUN pnpm install && pnpm build
@@ -223,11 +229,15 @@ AppServiceHTTPLogs
 
 The deployment follows Azure security best practices:
 
+- **VNet integration** — the App Service routes all outbound traffic through a virtual network, so calls to Azure OpenAI, Azure Files, and other backend services stay off the public internet
+- **Private endpoints & network ACLs** — Azure Storage and Azure OpenAI use private endpoints for DNS resolution and VNet service endpoint rules with a default-deny policy, blocking all public internet access while allowing traffic from the App Service subnet
 - **No passwords for ACR** — managed identity with AcrPull role
 - **HTTPS only** — HTTP redirects automatically
 - **TLS 1.2 minimum**
 - **FTP disabled**
 - **Secrets as App Settings** — encrypted at rest by the platform
+
+> **Note on ACR:** The container registry is the one resource that doesn't have a private endpoint in this template. Private endpoints for ACR require the Premium SKU (~$50/month vs. ~$5/month for Basic), and since the registry is only accessed at build time and container pull — both authenticated — the risk is low. If you want full network isolation, upgrade ACR to Premium and add a private endpoint following the same pattern used for Storage and OpenAI.
 
 ### Accessing the Control UI
 
@@ -273,6 +283,8 @@ The gateway token already protects the WebSocket endpoint. The main exposure is 
 
 For most personal deployments, **IP restrictions** are the sweet spot — one parameter, no code changes, and the Control UI stays usable.
 
+> **Tip:** For my own deployment, I enabled Easy Auth directly in the Azure Portal — it only takes a couple of clicks under **Settings > Authentication**. Even for a personal bot, it's a nice extra layer of protection. I'd recommend doing the same.
+
 ## What About Channels That Need Local Access?
 
 OpenClaw supports many channels. Here's what works in the cloud vs. what needs a local machine:
@@ -288,7 +300,7 @@ OpenClaw supports many channels. Here's what works in the cloud vs. what needs a
 | iMessage | ❌ No | Requires macOS |
 | WhatsApp | ⚠️ Limited | Requires QR code scan, headless limitations |
 
-For channels that need local access, you can run a second OpenClaw instance locally that handles just those channels.
+For channels that need local access, you can run a second OpenClaw instance on your Mac that handles just those channels, while the cloud instance covers everything else. This gives you a hybrid setup — the cloud handles Discord, Telegram, and other API-based channels 24/7, while your local machine only needs to be on for iMessage or WhatsApp. That way, your cloud bot keeps running even when your laptop is closed, and you're not paying for or maintaining a dedicated machine just for the channels that work fine over APIs.
 
 ## Cost
 
@@ -303,6 +315,8 @@ Running this setup costs approximately **$85–90/month** on the P0v4 plan (plus
 | Log Analytics | ~$2–5 |
 
 That's less than many cloud VMs, and you get managed TLS, health checks, deployment slots, and monitoring included.
+
+> **Want it cheaper?** If you don't need VNet integration, private endpoints, or deployment slots, you can drop to a **B1 (Basic) plan** at ~$13/month — bringing the total to roughly **$20–25/month**. The B1 still supports containers, Always On, custom domains, and WebSockets. You'd lose network isolation and staging slots, but for a personal bot that's often an acceptable trade-off. Just set `sku` to `B1` in the Bicep parameters and remove the VNet/PE modules.
 
 ## Updating OpenClaw
 
@@ -329,7 +343,7 @@ azd down --purge --force
 
 ## Wrapping Up
 
-Azure App Service is an excellent fit for hosting OpenClaw:
+Running OpenClaw locally is totally fine — but if you've been thinking about moving it off your laptop or Mac Mini, Azure App Service is a solid option:
 
 - **One command** (`azd up`) to go from zero to a running bot
 - **Always on** with WebSocket support and health checks
@@ -338,8 +352,8 @@ Azure App Service is an excellent fit for hosting OpenClaw:
 - **Observable** with Log Analytics and Azure Monitor alerts
 - **Simple to update** — rebuild the image and restart
 
-If you're currently running OpenClaw on your laptop and want it running 24/7, give this a try. Big thanks to [Dheeraj Bandaru](https://github.com/BandaruDheeraj) for the original [Container Apps deployment](https://www.agent-lair.com/deploy-clawdbot-azure-container-apps) that this project builds on — if Container Apps is more your style, start there.
+It's not the only way to host OpenClaw in the cloud, and it's not required — your local setup might be working just fine. But if you want something hands-off that runs 24/7, this is a good place to start.
 
----
+And while this guide uses OpenClaw as the example, the same idea applies to any always-on AI tool — whether it ships as a container, a Node.js app, a Python service, or something else entirely. App Service supports all of those. As more of these tools come out, having a go-to approach for cloud hosting will save you from dedicating hardware at home every time. Think of this as a template you can come back to.
 
-*Have questions or run into issues? Open an issue on the [GitHub repo](https://github.com/seligj95/openclaw-azure-appservice) or reach out on [openclaw.ai](https://openclaw.ai).*
+Big thanks to [Dheeraj Bandaru](https://github.com/BandaruDheeraj) for the original [Container Apps deployment](https://www.agent-lair.com/deploy-clawdbot-azure-container-apps) that inspired this — if Container Apps is more your style, check that out instead.

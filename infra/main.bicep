@@ -109,6 +109,17 @@ module logAnalytics 'modules/log-analytics.bicep' = {
   }
 }
 
+module vnet 'modules/vnet.bicep' = {
+  name: 'vnet'
+  scope: rg
+  params: {
+    name: '${abbrs.networkVirtualNetworks}${resourceToken}'
+    location: location
+    tags: tags
+    enableOpenAiDnsZone: enableAzureOpenAi
+  }
+}
+
 module containerRegistry 'modules/container-registry.bicep' = {
   name: 'container-registry'
   scope: rg
@@ -126,6 +137,9 @@ module storageAccount 'modules/storage-account.bicep' = {
     name: '${abbrs.storageStorageAccounts}${resourceToken}'
     location: location
     tags: tags
+    privateEndpointSubnetId: vnet.outputs.privateEndpointSubnetId
+    privateDnsZoneId: vnet.outputs.storagePrivateDnsZoneId
+    appSubnetId: vnet.outputs.appSubnetId
   }
 }
 
@@ -151,6 +165,9 @@ module azureOpenAi 'modules/azure-openai.bicep' = if (enableAzureOpenAi) {
     modelName: azureOpenAiModelName
     modelVersion: azureOpenAiModelVersion
     modelCapacity: azureOpenAiModelCapacity
+    privateEndpointSubnetId: vnet.outputs.privateEndpointSubnetId
+    privateDnsZoneId: vnet.outputs.openAiPrivateDnsZoneId
+    appSubnetId: vnet.outputs.appSubnetId
   }
 }
 
@@ -169,6 +186,7 @@ module appService 'modules/app-service.bicep' = {
     storageAccountName: storageAccount.outputs.name
     storageAccountAccessKey: storageAccount.outputs.accessKey
     storageFileShareName: storageAccount.outputs.fileShareName
+    virtualNetworkSubnetId: vnet.outputs.appSubnetId
     discordBotToken: discordBotToken
     discordAllowedUsers: discordAllowedUsers
     telegramBotToken: telegramBotToken

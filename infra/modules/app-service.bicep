@@ -62,6 +62,10 @@ param openclawPersonaName string = 'Clawd'
 @description('Comma-separated CIDR blocks for IP restrictions (empty = allow all)')
 param allowedIpRanges string = ''
 
+// --- VNet Integration ---
+@description('Subnet ID for VNet integration')
+param virtualNetworkSubnetId string
+
 // --- Azure OpenAI ---
 @description('Azure OpenAI endpoint URL')
 param azureOpenAiEndpoint string = ''
@@ -125,6 +129,8 @@ var baseAppSettings = [
   { name: 'OPENCLAW_PERSONA_NAME', value: openclawPersonaName }
   { name: 'OPENCLAW_WORKSPACE', value: '/mnt/openclaw-workspace' }
   { name: 'GATEWAY_PORT', value: '18789' }
+  // Required for App Service to resolve Private DNS Zones linked to the VNet
+  { name: 'WEBSITE_DNS_SERVER', value: '168.63.129.16' }
 ]
 
 var discordSettings = empty(discordBotToken) ? [] : [
@@ -160,6 +166,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: appServicePlanId
     httpsOnly: true
+    virtualNetworkSubnetId: virtualNetworkSubnetId
+    vnetContentShareEnabled: true
+    vnetRouteAllEnabled: true
+    vnetImagePullEnabled: false
     siteConfig: {
       linuxFxVersion: 'DOCKER|${acrLoginServer}/openclaw:${imageTag}'
       acrUseManagedIdentityCreds: true

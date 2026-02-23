@@ -2,6 +2,8 @@
   "cognitiveServicesAccounts": "oai-",
   "containerRegistryRegistries": "cr",
   "managedIdentityUserAssignedIdentities": "id-",
+  "networkVirtualNetworks": "vnet-",
+  "networkNetworkSecurityGroups": "nsg-",
   "operationalInsightsWorkspaces": "log-",
   "resourcesResourceGroups": "rg-",
   "storageStorageAccounts": "st",
