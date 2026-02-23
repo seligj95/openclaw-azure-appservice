@@ -1,3 +1,8 @@
+---
+title: "You Can Host OpenClaw on Azure App Service — Here's How"
+description: "Deploy OpenClaw to Azure App Service with VNet integration, private endpoints, and one-command deployment using azd."
+---
+
 # You Can Host OpenClaw on Azure App Service — Here's How
 
 *Your personal AI assistant, running 24/7 in the cloud — no laptop or Mac Mini required.*
