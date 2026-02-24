@@ -2,7 +2,7 @@
 
 Deploy [OpenClaw](https://openclaw.ai/) — your open-source personal AI assistant — to **Azure App Service (Web App for Containers)**. This sample uses the [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/) for one-command provisioning and deployment with security best practices: VNet integration, private endpoints, and network ACLs that block public internet access to backend services.
 
-📝 **Blog post:** [You Can Host OpenClaw on Azure App Service — Here's How](https://techcommunity.microsoft.com/blog/AppsonAzureBlog/you-can-host-openclaw-on-azure-app-service-%E2%80%94-heres-how/4496563)
+📝 **Blog post:** [You Can Host OpenClaw on Azure App Service — Here's How](https://seligj95.github.io/openclaw-azure-appservice/blog-post)
 
 ## Architecture
 
