@@ -8,7 +8,7 @@ param location string = resourceGroup().location
 param tags object = {}
 
 @description('SKU name for the App Service Plan')
-param skuName string = 'P0v4'
+param skuName string = 'B1'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: name

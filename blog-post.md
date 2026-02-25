@@ -314,19 +314,19 @@ For channels that need local access, you can run a second OpenClaw instance on y
 
 ## Cost
 
-Running this setup costs approximately **$85–90/month** on the P0v4 plan (plus Azure OpenAI usage):
+Running this setup costs approximately **$20–25/month** on the B1 (Basic) plan (plus Azure OpenAI usage):
 
 | Resource | Monthly |
 |---|---|
-| App Service (P0v4) | ~$77 |
+| App Service (B1) | ~$13 |
 | Container Registry (Basic) | ~$5 |
 | Azure OpenAI (GPT-4o) | Pay-per-token |
 | Storage (5 GB Standard) | ~$0.10 |
 | Log Analytics | ~$2–5 |
 
-That's less than many cloud VMs, and you get managed TLS, health checks, deployment slots, and monitoring included.
+The B1 plan gives you everything OpenClaw needs: containers, Always On, WebSockets, custom domains, and VNet integration with private endpoints. That's less than many cloud VMs, and you get managed TLS, health checks, and monitoring included.
 
-> **Want it cheaper?** If you don't need VNet integration, private endpoints, or deployment slots, you can drop to a **B1 (Basic) plan** at ~$13/month — bringing the total to roughly **$20–25/month**. The B1 still supports containers, Always On, custom domains, and WebSockets. You'd lose network isolation and staging slots, but for a personal bot that's often an acceptable trade-off. Just set `sku` to `B1` in the Bicep parameters and remove the VNet/PE modules.
+> **Need more headroom?** If you want deployment slots for zero-downtime updates or need more CPU and memory, upgrade to **P0v4**. Just set `appServiceSkuName` in the Bicep parameters.
 
 ## Updating OpenClaw
 

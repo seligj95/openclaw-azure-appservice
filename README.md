@@ -150,7 +150,7 @@ az webapp log tail --name <webapp-name> --resource-group <rg-name>
 
 | Parameter | Default | Description |
 |---|---|---|
-| `appServiceSkuName` | `P0v4` | App Service Plan SKU |
+| `appServiceSkuName` | `B1` | App Service Plan SKU |
 | `enableAzureOpenAi` | `true` | Provision Azure OpenAI with GPT-4o |
 | `enableAlerts` | `true` | Enable Azure Monitor alerts |
 | `alertEmailAddress` | `` | Email for alert notifications |
@@ -263,12 +263,12 @@ azd up
 
 | Resource | SKU | Estimated Monthly Cost |
 |---|---|---|
-| App Service Plan | P0v4 | ~$77 |
+| App Service Plan | B1 | ~$13 |
 | Container Registry | Basic | ~$5 |
 | Storage Account | Standard LRS (5 GB) | ~$0.10 |
 | Log Analytics | Pay-per-GB | ~$2–5 (low volume) |
 | Azure OpenAI | S0 (GPT-4o) | Pay-per-token |
-| **Total** | | **~$85–90/month + token usage** |
+| **Total** | | **~$20–25/month + token usage** |
 
 > Costs vary by region. Use the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) for precise estimates.
 

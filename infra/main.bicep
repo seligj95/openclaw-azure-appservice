@@ -57,7 +57,7 @@ param openclawPersonaName string = 'Clawd'
 
 // --- App Service ---
 @description('App Service Plan SKU')
-param appServiceSkuName string = 'P0v4'
+param appServiceSkuName string = 'B1'
 
 // --- Container ---
 @description('Container image tag')
